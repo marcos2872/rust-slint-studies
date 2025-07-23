@@ -1,0 +1,8 @@
+{
+  "counter": 5,
+  "timer_seconds": 0,
+  "user_text": "teste@gmail.com",
+  "random_min": 1.0,
+  "random_max": 100.0,
+  "dark_theme": false
+}

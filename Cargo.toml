@@ -7,6 +7,10 @@ edition = "2024"           # Edição mais recente do Rust
 # Dependências em tempo de execução
 [dependencies]
 slint = "1.9"              # Framework UI multiplataforma para aplicações nativas
+tokio = { version = "1.0", features = ["full"] }  # Runtime assíncrono
+serde = { version = "1.0", features = ["derive"] } # Serialização de dados
+serde_json = "1.0"         # Suporte a JSON
+rand = "0.8"               # Gerador de números aleatórios
 
 # Dependências em tempo de compilação
 [build-dependencies]

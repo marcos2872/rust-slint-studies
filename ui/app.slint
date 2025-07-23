@@ -1,52 +1,277 @@
 // Importa widgets padrão da biblioteca Slint
-import { Button, VerticalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, LineEdit, HorizontalBox, CheckBox, Slider } from "std-widgets.slint";
 
 // Define e exporta o componente principal da aplicação
 // inherits Window significa que este componente é uma janela
 export component AppWindow inherits Window {
+    width: 500px;
+    height: 800px;
+    
+    // === PROPRIEDADES ===
     // Propriedade que armazena o valor do contador
-    // in-out significa que pode ser lida e modificada
-    // <int> especifica o tipo como número inteiro
     in-out property <int> counter: 0;
     
-    // Callback (função de retorno) conectado ao evento de clique do botão
-    // <=> cria uma conexão bidirecional entre o callback e o evento
-    callback button-pressed <=> counter_button.clicked;
+    // Propriedades para o timer
+    in-out property <int> timer-seconds: 0;
+    in-out property <bool> timer-running: false;
     
-    // Container vertical que organiza os elementos da interface
+    // Propriedades para validação de texto
+    in-out property <string> user-text: "";
+    in-out property <string> validation-message: "";
+    in-out property <bool> text-valid: true;
+    
+    // Propriedades para gerador de números
+    in-out property <int> random-number: 0;
+    in-out property <float> random-min: 1;
+    in-out property <float> random-max: 100;
+    
+    // Propriedades para temas
+    in-out property <bool> dark-theme: false;
+    
+    // === CALLBACKS (Comunicação Rust ↔ Slint) ===
+    // Callbacks básicos
+    callback increment-counter();
+    callback reset-counter();
+    
+    // Callbacks do timer (executados em Rust)
+    callback start-timer();
+    callback stop-timer();
+    callback reset-timer();
+    
+    // Callbacks para validação de texto
+    callback validate-text(string) -> string;  // Recebe texto, retorna mensagem
+    callback text-changed(string);             // Notifica mudança de texto
+    
+    // Callbacks para arquivo
+    callback save-data();
+    callback load-data();
+    
+    // Callbacks para números aleatórios
+    callback generate-random();
+    callback set-random-range(float, float);
+    
+    // === INTERFACE ===
     VerticalBox {
-        // Distribui elementos com espaçamento uniforme
-        alignment: space-around;
+        spacing: 10px;
+        padding: 20px;
         
-        // Texto do título da aplicação
+        // === TÍTULO ===
         Text {
-            text: "Meu Primeiro App Slint!";
-            font-size: 24px;                    // Tamanho da fonte
-            horizontal-alignment: center;        // Centraliza horizontalmente
-        }
-
-        // Texto que mostra o valor atual do contador
-        Text {
-            text: "Contador: " + root.counter;  // Concatena string com valor do contador
-            font-size: 18px;
+            text: "App Rust + Slint Avançado";
+            font-size: 24px;
+            font-weight: 700;
             horizontal-alignment: center;
+            color: root.dark-theme ? #ffffff : #000000;
         }
 
-        // Botão para incrementar o contador
-        // := atribui um identificador (counter_button) ao elemento
-        counter_button := Button {
-            text: "Incrementar";
-            // Função executada quando o botão é clicado
-            clicked => {
-                // Incrementa o valor do contador em 1
-                root.counter = root.counter + 1;
+        // === SEÇÃO CONTADOR ===
+        Rectangle {
+            background: root.dark-theme ? #2a2a2a : #f0f0f0;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: "Contador: " + root.counter;
+                    font-size: 18px;
+                    horizontal-alignment: center;
+                    color: root.dark-theme ? #ffffff : #000000;
+                }
+                
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 10px;
+                    
+                    Button {
+                        text: "Incrementar";
+                        clicked => { root.increment-counter(); }
+                    }
+                    
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-counter(); }
+                    }
+                }
             }
         }
 
-        // Campo de entrada de texto
-        LineEdit {
-            placeholder-text: "Digite algo aqui...";  // Texto de exemplo
-            font-size: 16px;
+        // === SEÇÃO TIMER ===
+        Rectangle {
+            background: root.dark-theme ? #2a2a2a : #f0f0f0;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: "Timer: " + root.timer-seconds + "s";
+                    font-size: 18px;
+                    horizontal-alignment: center;
+                    color: root.timer-running ? #00ff00 : (root.dark-theme ? #ffffff : #000000);
+                }
+                
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 10px;
+                    
+                    Button {
+                        text: root.timer-running ? "Parar" : "Iniciar";
+                        clicked => {
+                            if (root.timer-running) {
+                                root.stop-timer();
+                            } else {
+                                root.start-timer();
+                            }
+                        }
+                    }
+                    
+                    Button {
+                        text: "Reset";
+                        clicked => { root.reset-timer(); }
+                    }
+                }
+            }
+        }
+
+        // === SEÇÃO VALIDAÇÃO DE TEXTO ===
+        Rectangle {
+            background: root.dark-theme ? #2a2a2a : #f0f0f0;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: "Validação de Texto";
+                    font-size: 16px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    color: root.dark-theme ? #ffffff : #000000;
+                }
+                
+                text-input := LineEdit {
+                    placeholder-text: "Digite um email...";
+                    text <=> root.user-text;
+                    // Chama validação sempre que o texto muda
+                    edited => {
+                        root.text-changed(self.text);
+                        root.validation-message = root.validate-text(self.text);
+                    }
+                }
+                
+                Text {
+                    text: root.validation-message;
+                    color: root.text-valid ? #00aa00 : #ff0000;
+                    font-size: 12px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // === SEÇÃO NÚMEROS ALEATÓRIOS ===
+        Rectangle {
+            background: root.dark-theme ? #2a2a2a : #f0f0f0;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: "Gerador Aleatório";
+                    font-size: 16px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    color: root.dark-theme ? #ffffff : #000000;
+                }
+                
+                Text {
+                    text: "Número: " + root.random-number;
+                    font-size: 20px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    color: #0066cc;
+                }
+                
+                HorizontalBox {
+                    alignment: space-between;
+                    
+                    Text {
+                        text: "Min: " + Math.round(root.random-min);
+                        color: root.dark-theme ? #ffffff : #000000;
+                    }
+                    
+                    min-slider := Slider {
+                        minimum: 1;
+                        maximum: 50;
+                        value <=> root.random-min;
+                        changed => {
+                            root.set-random-range(self.value, root.random-max);
+                        }
+                    }
+                }
+                
+                HorizontalBox {
+                    alignment: space-between;
+                    
+                    Text {
+                        text: "Max: " + Math.round(root.random-max);
+                        color: root.dark-theme ? #ffffff : #000000;
+                    }
+                    
+                    max-slider := Slider {
+                        minimum: 51;
+                        maximum: 1000;
+                        value <=> root.random-max;
+                        changed => {
+                            root.set-random-range(root.random-min, self.value);
+                        }
+                    }
+                }
+                
+                Button {
+                    text: "Gerar Número";
+                    clicked => { root.generate-random(); }
+                }
+            }
+        }
+
+        // === SEÇÃO PERSISTÊNCIA ===
+        Rectangle {
+            background: root.dark-theme ? #2a2a2a : #f0f0f0;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: "Persistência de Dados";
+                    font-size: 16px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    color: root.dark-theme ? #ffffff : #000000;
+                }
+                
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 10px;
+                    
+                    Button {
+                        text: "Salvar";
+                        clicked => { root.save-data(); }
+                    }
+                    
+                    Button {
+                        text: "Carregar";
+                        clicked => { root.load-data(); }
+                    }
+                }
+            }
+        }
+
+        // === CONTROLES GERAIS ===
+        HorizontalBox {
+            alignment: space-between;
+            
+            CheckBox {
+                text: "Tema Escuro";
+                checked <=> root.dark-theme;
+            }
         }
     }
 }
