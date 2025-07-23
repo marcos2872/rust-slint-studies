@@ -1,0 +1,52 @@
+// Importa widgets padrão da biblioteca Slint
+import { Button, VerticalBox, LineEdit } from "std-widgets.slint";
+
+// Define e exporta o componente principal da aplicação
+// inherits Window significa que este componente é uma janela
+export component AppWindow inherits Window {
+    // Propriedade que armazena o valor do contador
+    // in-out significa que pode ser lida e modificada
+    // <int> especifica o tipo como número inteiro
+    in-out property <int> counter: 0;
+    
+    // Callback (função de retorno) conectado ao evento de clique do botão
+    // <=> cria uma conexão bidirecional entre o callback e o evento
+    callback button-pressed <=> counter_button.clicked;
+    
+    // Container vertical que organiza os elementos da interface
+    VerticalBox {
+        // Distribui elementos com espaçamento uniforme
+        alignment: space-around;
+        
+        // Texto do título da aplicação
+        Text {
+            text: "Meu Primeiro App Slint!";
+            font-size: 24px;                    // Tamanho da fonte
+            horizontal-alignment: center;        // Centraliza horizontalmente
+        }
+
+        // Texto que mostra o valor atual do contador
+        Text {
+            text: "Contador: " + root.counter;  // Concatena string com valor do contador
+            font-size: 18px;
+            horizontal-alignment: center;
+        }
+
+        // Botão para incrementar o contador
+        // := atribui um identificador (counter_button) ao elemento
+        counter_button := Button {
+            text: "Incrementar";
+            // Função executada quando o botão é clicado
+            clicked => {
+                // Incrementa o valor do contador em 1
+                root.counter = root.counter + 1;
+            }
+        }
+
+        // Campo de entrada de texto
+        LineEdit {
+            placeholder-text: "Digite algo aqui...";  // Texto de exemplo
+            font-size: 16px;
+        }
+    }
+}

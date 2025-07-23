@@ -1,0 +1,13 @@
+# Configuração do projeto Rust
+[package]
+name = "slint-app"         # Nome do projeto
+version = "0.1.0"          # Versão inicial
+edition = "2024"           # Edição mais recente do Rust
+
+# Dependências em tempo de execução
+[dependencies]
+slint = "1.9"              # Framework UI multiplataforma para aplicações nativas
+
+# Dependências em tempo de compilação
+[build-dependencies]
+slint-build = "1.9"        # Ferramenta para compilar arquivos .slint em código Rust
