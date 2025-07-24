@@ -28,6 +28,9 @@ export component AppWindow inherits Window {
     // Propriedades para temas
     in-out property <bool> dark-theme: false;
     
+    // Propriedade para controlar visibilidade do tray
+    in-out property <bool> window-hidden: false;
+    
     // === CALLBACKS (Comunicação Rust ↔ Slint) ===  
     // Callbacks básicos
     callback increment-counter();
@@ -278,10 +281,17 @@ export component AppWindow inherits Window {
                 checked <=> root.dark-theme;
             }
 
-            Button {
+            // Mostra botão apropriado dependendo do estado da janela
+            if !root.window-hidden: Button {
                 text: "Minimizar para Tray";
                 clicked => {
                     root.minimize-to-tray();
+                }
+            }
+            if root.window-hidden: Button {
+                text: "Restaurar do Tray";
+                clicked => {
+                    root.restore-from-tray();
                 }
             }
         }

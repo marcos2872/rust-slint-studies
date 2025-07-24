@@ -122,6 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ui.set_random_min(1.0);
     ui.set_random_max(100.0);
     ui.set_dark_theme(false);
+    ui.set_window_hidden(false);
     
     // === CALLBACKS BÁSICOS ===
     // Incrementar contador
@@ -321,6 +322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.on_minimize_to_tray(move || {
             let ui = ui_weak.unwrap();
             ui.window().hide().unwrap();
+            ui.set_window_hidden(true);
             *tray_visible.lock().unwrap() = false;
             println!("🔸 Janela minimizada para system tray");
         });
@@ -332,6 +334,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.on_restore_from_tray(move || {
             let ui = ui_weak2.unwrap();
             ui.window().show().unwrap();
+            ui.set_window_hidden(false);
             *tray_visible2.lock().unwrap() = true;
             println!("🔹 Janela restaurada do system tray");
         });
@@ -344,6 +347,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.window().on_close_requested(move || {
             let ui = ui_weak3.unwrap();
             ui.window().hide().unwrap();
+            ui.set_window_hidden(true);
             *tray_visible3.lock().unwrap() = false;
             println!("🔸 Janela minimizada para tray (evento de fechamento interceptado)");
             slint::CloseRequestResponse::KeepWindowShown
