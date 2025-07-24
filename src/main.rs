@@ -6,6 +6,10 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use rand::Rng;
 
+// Módulos
+mod tray;
+use tray::SystemTray;
+
 // Macro que inclui o código Rust gerado a partir dos arquivos .slint
 slint::include_modules!();
 
@@ -83,9 +87,28 @@ fn load_app_data() -> Result<AppData, String> {
 
 // === FUNÇÃO PRINCIPAL ===
 #[tokio::main]
-async fn main() -> Result<(), slint::PlatformError> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Cria instância da janela principal
     let ui = AppWindow::new()?;
+    
+    // === SYSTEM TRAY ===
+    println!("🔧 Tentando criar system tray...");
+    let ui_weak = ui.as_weak();
+    let system_tray = match SystemTray::new(ui_weak) {
+        Ok(tray) => {
+            println!("✅ System tray criado com sucesso!");
+            Some(tray)
+        },
+        Err(e) => {
+            println!("⚠️ Falha ao criar system tray: {}", e);
+            println!("💡 A aplicação continuará funcionando sem system tray");
+            None
+        }
+    };
+    
+    let tray_window_visible = system_tray.as_ref()
+        .map(|t| t.is_window_visible.clone())
+        .unwrap_or_else(|| Arc::new(Mutex::new(true)));
     
     // === ESTADO COMPARTILHADO ===
     // Timer compartilhado entre threads
@@ -289,8 +312,55 @@ async fn main() -> Result<(), slint::PlatformError> {
         });
     }
     
+    // === CALLBACKS DO TRAY ===
+    // Minimizar para tray (só ativa se tray existe)
+    if system_tray.is_some() {
+        let ui_weak = ui.as_weak();
+        let tray_visible = tray_window_visible.clone();
+        
+        ui.on_minimize_to_tray(move || {
+            let ui = ui_weak.unwrap();
+            ui.window().hide().unwrap();
+            *tray_visible.lock().unwrap() = false;
+            println!("🔸 Janela minimizada para system tray");
+        });
+        
+        // Restaurar do tray
+        let ui_weak2 = ui.as_weak();
+        let tray_visible2 = tray_window_visible.clone();
+        
+        ui.on_restore_from_tray(move || {
+            let ui = ui_weak2.unwrap();
+            ui.window().show().unwrap();
+            *tray_visible2.lock().unwrap() = true;
+            println!("🔹 Janela restaurada do system tray");
+        });
+
+        // === INTERCEPTAR FECHAMENTO DA JANELA ===
+        // Quando clicar no X, minimiza para tray ao invés de fechar
+        let ui_weak3 = ui.as_weak();
+        let tray_visible3 = tray_window_visible.clone();
+        
+        ui.window().on_close_requested(move || {
+            let ui = ui_weak3.unwrap();
+            ui.window().hide().unwrap();
+            *tray_visible3.lock().unwrap() = false;
+            println!("🔸 Janela minimizada para tray (evento de fechamento interceptado)");
+            slint::CloseRequestResponse::KeepWindowShown
+        });
+    } else {
+        // Se não há tray, desabilita callback
+        ui.on_minimize_to_tray(|| {
+            println!("⚠️ System tray não disponível - janela permanece visível");
+        });
+        
+        ui.on_restore_from_tray(|| {
+            println!("⚠️ System tray não disponível");
+        });
+    }
+    
     // === INICIALIZAÇÃO ===
-    println!("🚀 Aplicação Rust + Slint iniciada!");
+    println!("🚀 Aplicação Rust + Slint com System Tray iniciada!");
     println!("📋 Funcionalidades disponíveis:");
     println!("   • Contador com incremento/reset");
     println!("   • Timer com controles start/stop/reset");
@@ -298,8 +368,22 @@ async fn main() -> Result<(), slint::PlatformError> {
     println!("   • Gerador de números aleatórios");
     println!("   • Persistência de dados em JSON");
     println!("   • Tema claro/escuro");
+    if system_tray.is_some() {
+        println!("   • 🆕 System Tray ativo");
+        println!("   • 🆕 Minimizar/restaurar para tray");
+        println!("");
+        println!("💡 Dicas:");
+        println!("   • Clique no ícone do tray: mostrar/ocultar janela");
+        println!("   • Botão 'Minimizar para Tray' na interface");
+    } else {
+        println!("   • ⚠️ System Tray não disponível neste sistema");
+        println!("");
+        println!("💡 Para usar system tray:");
+        println!("   • Verifique se seu desktop suporta system tray");
+        println!("   • No GNOME: instale extensão como TopIcons Plus");
+    }
     println!("");
     
     // Inicia o loop de eventos da aplicação
-    ui.run()
+    ui.run().map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }

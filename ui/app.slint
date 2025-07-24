@@ -5,7 +5,7 @@ import { Button, VerticalBox, LineEdit, HorizontalBox, CheckBox, Slider } from "
 // inherits Window significa que este componente é uma janela
 export component AppWindow inherits Window {
     width: 500px;
-    height: 800px;
+    height: 900px;
     
     // === PROPRIEDADES ===
     // Propriedade que armazena o valor do contador
@@ -28,10 +28,14 @@ export component AppWindow inherits Window {
     // Propriedades para temas
     in-out property <bool> dark-theme: false;
     
-    // === CALLBACKS (Comunicação Rust ↔ Slint) ===
+    // === CALLBACKS (Comunicação Rust ↔ Slint) ===  
     // Callbacks básicos
     callback increment-counter();
     callback reset-counter();
+    
+    // Callbacks para system tray
+    callback minimize-to-tray();
+    callback restore-from-tray();
     
     // Callbacks do timer (executados em Rust)
     callback start-timer();
@@ -70,26 +74,28 @@ export component AppWindow inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 15px;
-                
                 Text {
                     text: "Contador: " + root.counter;
                     font-size: 18px;
                     horizontal-alignment: center;
                     color: root.dark-theme ? #ffffff : #000000;
                 }
-                
+
                 HorizontalBox {
                     alignment: center;
                     spacing: 10px;
-                    
                     Button {
                         text: "Incrementar";
-                        clicked => { root.increment-counter(); }
+                        clicked => {
+                            root.increment-counter();
+                        }
                     }
-                    
+
                     Button {
                         text: "Reset";
-                        clicked => { root.reset-counter(); }
+                        clicked => {
+                            root.reset-counter();
+                        }
                     }
                 }
             }
@@ -101,18 +107,16 @@ export component AppWindow inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 15px;
-                
                 Text {
                     text: "Timer: " + root.timer-seconds + "s";
                     font-size: 18px;
                     horizontal-alignment: center;
                     color: root.timer-running ? #00ff00 : (root.dark-theme ? #ffffff : #000000);
                 }
-                
+
                 HorizontalBox {
                     alignment: center;
                     spacing: 10px;
-                    
                     Button {
                         text: root.timer-running ? "Parar" : "Iniciar";
                         clicked => {
@@ -123,10 +127,12 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
-                    
+
                     Button {
                         text: "Reset";
-                        clicked => { root.reset-timer(); }
+                        clicked => {
+                            root.reset-timer();
+                        }
                     }
                 }
             }
@@ -138,7 +144,6 @@ export component AppWindow inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 15px;
-                
                 Text {
                     text: "Validação de Texto";
                     font-size: 16px;
@@ -146,7 +151,7 @@ export component AppWindow inherits Window {
                     horizontal-alignment: center;
                     color: root.dark-theme ? #ffffff : #000000;
                 }
-                
+
                 text-input := LineEdit {
                     placeholder-text: "Digite um email...";
                     text <=> root.user-text;
@@ -156,7 +161,7 @@ export component AppWindow inherits Window {
                         root.validation-message = root.validate-text(self.text);
                     }
                 }
-                
+
                 Text {
                     text: root.validation-message;
                     color: root.text-valid ? #00aa00 : #ff0000;
@@ -172,7 +177,6 @@ export component AppWindow inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 15px;
-                
                 Text {
                     text: "Gerador Aleatório";
                     font-size: 16px;
@@ -180,7 +184,7 @@ export component AppWindow inherits Window {
                     horizontal-alignment: center;
                     color: root.dark-theme ? #ffffff : #000000;
                 }
-                
+
                 Text {
                     text: "Número: " + root.random-number;
                     font-size: 20px;
@@ -188,15 +192,14 @@ export component AppWindow inherits Window {
                     horizontal-alignment: center;
                     color: #0066cc;
                 }
-                
+
                 HorizontalBox {
                     alignment: space-between;
-                    
                     Text {
                         text: "Min: " + Math.round(root.random-min);
                         color: root.dark-theme ? #ffffff : #000000;
                     }
-                    
+
                     min-slider := Slider {
                         minimum: 1;
                         maximum: 50;
@@ -206,15 +209,14 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                
+
                 HorizontalBox {
                     alignment: space-between;
-                    
                     Text {
                         text: "Max: " + Math.round(root.random-max);
                         color: root.dark-theme ? #ffffff : #000000;
                     }
-                    
+
                     max-slider := Slider {
                         minimum: 51;
                         maximum: 1000;
@@ -224,10 +226,12 @@ export component AppWindow inherits Window {
                         }
                     }
                 }
-                
+
                 Button {
                     text: "Gerar Número";
-                    clicked => { root.generate-random(); }
+                    clicked => {
+                        root.generate-random();
+                    }
                 }
             }
         }
@@ -238,7 +242,6 @@ export component AppWindow inherits Window {
             border-radius: 8px;
             VerticalBox {
                 padding: 15px;
-                
                 Text {
                     text: "Persistência de Dados";
                     font-size: 16px;
@@ -246,19 +249,22 @@ export component AppWindow inherits Window {
                     horizontal-alignment: center;
                     color: root.dark-theme ? #ffffff : #000000;
                 }
-                
+
                 HorizontalBox {
                     alignment: center;
                     spacing: 10px;
-                    
                     Button {
                         text: "Salvar";
-                        clicked => { root.save-data(); }
+                        clicked => {
+                            root.save-data();
+                        }
                     }
-                    
+
                     Button {
                         text: "Carregar";
-                        clicked => { root.load-data(); }
+                        clicked => {
+                            root.load-data();
+                        }
                     }
                 }
             }
@@ -267,10 +273,16 @@ export component AppWindow inherits Window {
         // === CONTROLES GERAIS ===
         HorizontalBox {
             alignment: space-between;
-            
             CheckBox {
                 text: "Tema Escuro";
                 checked <=> root.dark-theme;
+            }
+
+            Button {
+                text: "Minimizar para Tray";
+                clicked => {
+                    root.minimize-to-tray();
+                }
             }
         }
     }
